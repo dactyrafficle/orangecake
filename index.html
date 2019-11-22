@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+
+<body>
+
+<div id="dropContainer" style="border: 2px dashed rgb(170, 170, 170); float: left; padding: 4px; width: 300px; height: 200px; margin: 10px;">
+  <p id='containerMessage' style='line-height: 150px; text-align: center; font-family: calibri; font-size: 20px;'> Drag and drop an image file here. </p>
+</div>
+
+<div id='container'></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.16/p5.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.16/addons/p5.dom.min.js"></script>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.8.0/jszip.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.8.0/xlsx.js"></script>
+
+
+</body>
+<script>
+
+var container = document.getElementById('dropContainer');
+
+// dragenter event listener
+container.addEventListener('dragenter', function(e) {
+  e.stopPropagation();
+  e.preventDefault();
+  this.style.border = '2px dashed rgb(50, 50, 50)';
+}, false);
+
+// dragover event listener
+container.addEventListener('dragover', function(e) {
+  e.stopPropagation();
+  e.preventDefault();
+  this.style.border = '2px dashed rgb(50, 50, 50)';
+}, false);
+
+// dragleave event listener
+container.addEventListener('dragleave', function(e) {
+  e.stopPropagation();
+  e.preventDefault();
+  this.style.border = '2px dashed rgb(170, 170, 170)';
+}, false);
+
+dropContainer.addEventListener('drop', function(e) {
+  e.stopPropagation();
+  e.preventDefault();
+  this.style.border = '2px dashed rgb(170, 170, 170)';  
+
+	// this is the file itself that were dropping and the event were looking at is the drop event, nothing more
+	var file = e.dataTransfer.files[0];
+	//console.log(file);
+	
+	var fileExtension = file.name.split('.')[file.name.split('.').length-1];
+	//console.log(fileExtension);
+	
+	var isExcelFile = false;
+	
+	if (fileExtension === 'xlsx') {
+		isExcelFile = true;
+	}
+	
+	console.log(isExcelFile);
+	
+  /* 1. make a fileReader object */
+  var reader = new FileReader();
+    
+  /* 2. we define what happens when the fileReader is done reading something */
+  reader.addEventListener('load', function(e) {
+    var data = e.target.result;
+    //console.log(fileContentAsText);
+		
+		if (isExcelFile) {
+			parseDataIfExcelFile(data);
+		} else {
+			console.log(data);
+		}
+
+			
+			
+  }, false); 
+
+  /* 3. use the fileReader object to read the file, and return a string */
+	// in the case of xlsx file, we use readAsBinaryString as opposed to readAsText
+	if (fileExtension == 'xlsx') {
+		reader.readAsBinaryString(e.dataTransfer.files[0]); 	
+	} else {
+		reader.readAsText(e.dataTransfer.files[0]);
+	}
+
+
+ }, false);
+ 
+ var blockArray = [];
+ 
+ function parseDataIfExcelFile(data) {
+	var wb = XLSX.read(data, {
+			type: 'binary'
+	 });
+	 //console.log(wb)
+	 
+	  // in this case, there is only one ws in the wb
+		//wb.SheetNames.forEach(function(sheetName) {
+		
+		//console.log(wb.Sheets);
+		
+		Object.keys(wb.Sheets).forEach(function(ws) {
+			//console.log(wb.Sheets[ws]);
+		});
+		
+		// suppose I'm only interested in the first one
+		
+		var ws = wb.Sheets[Object.keys(wb.Sheets)[0]];
+		console.log(ws);
+		
+		/* INTERESTING */
+		
+		// every cell will be listed as its own object
+		// so cell a1 will have multiple properties
+		// one will be A1.w and thats just whats written there
+		
+		
+		/* i need to parse this into row objects */
+		
+		// i want to print out all the cell names
+		//console.log(Object.keys(ws));
+		
+		// the whole range of the ws
+		console.log(ws['!ref']);
+		
+		// let us parse it into rows and columns
+		var cells = ws['!ref'];
+		console.log(typeof cells);
+		var first = cells.split(':')[0];
+		var last = cells.split(':')[1];
+		console.log(first);
+		console.log(last);
+		
+		// loop over the ALL the cells and group them based on their number, which I can get no 
+		
+		// how to get a number from a string USE REGEX
+		var n = last.match(/\d+/)[0];
+		console.log(n);
+		
+		 var XL_row_object = XLSX.utils.sheet_to_row_object_array(ws);
+		console.log(XL_row_object);
+		
+		
+		/* get the cell values */
+		
+		var cell_address = {c:0, r:0};
+		var cell_ref = XLSX.utils.encode_cell(cell_address);
+		var cellValue = ws[cell_ref]
+		var cellValue = (cellValue ? cellValue.v : undefined);
+
+		//console.log(cellValue);
+		
+		//console.log(Object.keys(ws)); // returns all the cells
+		
+		// so i can loop over all the cells
+		
+		Object.keys(ws).forEach(function(x) {
+			//console.log(ws[x]);
+		});
+		
+		
+		// get their row and columns
+		
+		// new object
+		//var blockArray = [];
+		for (let i = 0; i < XL_row_object.length; i++) {
+			let line = XL_row_object[i]['WorkCtr'];
+			let desc = XL_row_object[i]['Desc'];
+			let startDate = XL_row_object[i]['StartDate'];
+			let endDate = XL_row_object[i]['EndDate'];		
+			let startTime = XL_row_object[i]['StartTime'];
+			let endTime = XL_row_object[i]['EndTime'];			
+			if (isNumeric(line)) {
+				//console.log(line);
+				let x = new Block(line, desc, startDate, endDate, startTime, endTime);
+				//console.log(typeof x.start)
+				blockArray.push(x);
+			}
+		};
+		
+		console.log(blockArray);
+		// wb.Sheets is an object, not an array
+		//console.log(Object.keys(workbook.Sheets));
+		
+		//.forEach(function(ws) {	
+		
+			//console.log(ws);
+		
+			// Here is your object
+			//var XL_row_object = XLSX.utils.sheet_to_row_object_array(workbook.Sheets[sheetName]);
+			
+			//console.log(XL_row_object);
+			//var json_object = JSON.stringify(XL_row_object);
+			//console.log(json_object);
+
+		//})
+ }
+
+
+function setup() {
+  var c = createCanvas(600, 600);
+  c.parent('container');
+}
+
+function draw() {
+  background(51);
+	
+	for (var i = 0; i < blockArray.length; i++) {
+		blockArray[i].display();
+	}
+	
+}
+ 
+ 
+ 
+function isNumeric(n) {
+  return !isNaN(parseFloat(n)) && isFinite(n);
+}
+
+function Block(line, itemNumber, startDate, endDate, startTime, endTime) {
+	this.line = line;
+	this.itemNumber = itemNumber;
+	this.startDate = startDate;
+	this.endDate = endDate;
+	this.startTime = startTime;
+	this.endTime = endTime;
+	
+	
+	this.gap = 10;
+	
+	// parse the times
+	this.x = parseFloat(this.startDate) + parseFloat(this.startTime) - 43600;
+	this.h = 30;
+	this.y = parseFloat(this.line)*(this.h+this.gap);
+	this.w = (parseFloat(this.endDate)+parseFloat(this.endTime)- 43600 - this.x)*350;
+	this.red = random(0, 255);
+	this.green = random(0, 255);
+	this.blue = random(0, 255);
+	this.alpha = 120;
+}
+Block.prototype.display = function() {
+	//noStroke();
+	stroke(255);
+	
+	fill(this.red, this.green, this.blue, this.alpha);
+	rect(this.x, height-this.y, this.w, this.h);
+	
+	noStroke();
+	fill(255);
+	text("Line" + this.line, this.x-this.h*2, height-this.y+this.h*0.5);
+}
+
+</script>
+
+</html>
