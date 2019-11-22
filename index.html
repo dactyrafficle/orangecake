@@ -169,6 +169,7 @@ dropContainer.addEventListener('drop', function(e) {
 		
 		// new object
 		//var blockArray = [];
+		
 		for (let i = 0; i < XL_row_object.length; i++) {
 			let line = XL_row_object[i]['WorkCtr'];
 			let desc = XL_row_object[i]['Desc'];
@@ -178,7 +179,10 @@ dropContainer.addEventListener('drop', function(e) {
 			let endTime = XL_row_object[i]['EndTime'];			
 			if (isNumeric(line)) {
 				//console.log(line);
-				let x = new Block(line, desc, startDate, endDate, startTime, endTime);
+
+				let lineShift = 0;
+
+				let x = new Block(line, lineShift, desc, startDate, endDate, startTime, endTime);
 				//console.log(typeof x.start)
 				blockArray.push(x);
 			}
@@ -212,9 +216,17 @@ function draw() {
   background(51);
 	
 	for (var i = 0; i < blockArray.length; i++) {
+		blockArray[i].update();
 		blockArray[i].display();
 	}
 	
+}
+
+function mouseClicked() {
+	console.log(mouseX);
+	for (var i = 0; i < blockArray.length; i++) {
+		blockArray[i].highlight();
+	}	
 }
  
  
@@ -223,37 +235,67 @@ function isNumeric(n) {
   return !isNaN(parseFloat(n)) && isFinite(n);
 }
 
-function Block(line, itemNumber, startDate, endDate, startTime, endTime) {
+function Block(line, lineShift, itemNumber, startDate, endDate, startTime, endTime) {
 	this.line = line;
 	this.itemNumber = itemNumber;
 	this.startDate = startDate;
 	this.endDate = endDate;
 	this.startTime = startTime;
 	this.endTime = endTime;
+	this.lineShift = lineShift;
+	this.startShift = 999999;
+	this.highlighted = false;
 	
 	
-	this.gap = 10;
+	this.gap = 25;
 	
 	// parse the times
-	this.x = parseFloat(this.startDate) + parseFloat(this.startTime) - 43600;
-	this.h = 30;
-	this.y = parseFloat(this.line)*(this.h+this.gap);
-	this.w = (parseFloat(this.endDate)+parseFloat(this.endTime)- 43600 - this.x)*350;
+	this.x = parseFloat(this.startDate) + parseFloat(this.startTime);
+	this.h = 10;
+	this.y = parseFloat(this.line)*(this.h+this.gap)+this.lineShift;
+	this.w = Math.abs((parseFloat(this.endDate)+parseFloat(this.endTime) - this.x)*350);
+	
+	
 	this.red = random(0, 255);
 	this.green = random(0, 255);
 	this.blue = random(0, 255);
-	this.alpha = 120;
+	this.alpha = 70;
 }
 Block.prototype.display = function() {
 	//noStroke();
-	stroke(255);
+	stroke(201);
+	
+	if (this.highlighted) {
+		this.alpha = 255;
+	} else {
+		this.alpha = 70;
+	}
 	
 	fill(this.red, this.green, this.blue, this.alpha);
-	rect(this.x, height-this.y, this.w, this.h);
+	rect(this.x-this.startShift+width*0.25, height-this.y, this.w, this.h);
 	
 	noStroke();
 	fill(255);
-	text("Line" + this.line, this.x-this.h*2, height-this.y+this.h*0.5);
+	text("Line" + this.line, this.x-this.startShift-this.h*2+width*0.25, height-this.y+this.h*0.5);
+}
+Block.prototype.update = function() {
+	let s = this.x;
+	if (s < this.startShift) {
+		this.startShift = s;
+	}
+}
+Block.prototype.highlight = function() {
+	this.x1 = this.x-this.startShift+width*0.25;
+	this.x2 = this.x1 + this.w;
+	this.y1 = height-this.y;
+	this.y2 = this.y1 + this.h;
+	
+	if (!this.highlighted && mouseX > this.x1 && mouseX < this.x2 && mouseY > this.y1 && mouseY < this.y2) {
+		this.highlighted = true;
+		
+	} else {
+		this.highlighted = false;
+	}
 }
 
 </script>
