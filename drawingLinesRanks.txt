@@ -1,0 +1,26 @@
+i need to have the y position calculate in 2 ways
+
+every block will have a number, rank, an integer which is their position from the bottom
+
+in this way, i can calculate its height by a combination of LN# and rank
+
+ie. LN#*5 + rank*2
+
+this way, all the blocks of a line are grouped together, and the spaces between lines is preserved
+
+BUT the second way
+
+is to calculate a 2nd LN# which is really the LINERANK
+
+so if you had lines 2, 6, 7 total, they would be ranked as 1, 2, 3
+
+
+the same equation would work
+
+This way, we can draw using line and rank, or one or the other
+
+/* how to group?
+
+ie. production.line.rank
+
+gantt.line.rank?

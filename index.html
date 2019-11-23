@@ -92,7 +92,7 @@ dropContainer.addEventListener('drop', function(e) {
 
  }, false);
  
- var blockArray = [];
+ var blocks = [];
  
  function parseDataIfExcelFile(data) {
 	var wb = XLSX.read(data, {
@@ -144,7 +144,7 @@ dropContainer.addEventListener('drop', function(e) {
 		console.log(n);
 		
 		 var XL_row_object = XLSX.utils.sheet_to_row_object_array(ws);
-		console.log(XL_row_object);
+		//console.log(XL_row_object);
 		
 		
 		/* get the cell values */
@@ -168,7 +168,7 @@ dropContainer.addEventListener('drop', function(e) {
 		// get their row and columns
 		
 		// new object
-		//var blockArray = [];
+		//var blocks = [];
 		
 		for (let i = 0; i < XL_row_object.length; i++) {
 			let line = XL_row_object[i]['WorkCtr'];
@@ -181,29 +181,64 @@ dropContainer.addEventListener('drop', function(e) {
 				//console.log(line);
 
 				let lineShift = 0;
-
-				let x = new Block(line, lineShift, desc, startDate, endDate, startTime, endTime);
+				let line2 = 0;
+				let x = new Block(line, line2, lineShift, desc, startDate, endDate, startTime, endTime);
 				//console.log(typeof x.start)
-				blockArray.push(x);
+				blocks.push(x);
 			}
 		};
 		
-		console.log(blockArray);
-		// wb.Sheets is an object, not an array
-		//console.log(Object.keys(workbook.Sheets));
+		console.log('now we have all the objects we plan to draw');
+		//console.log(blocks);
 		
-		//.forEach(function(ws) {	
-		
-			//console.log(ws);
-		
-			// Here is your object
-			//var XL_row_object = XLSX.utils.sheet_to_row_object_array(workbook.Sheets[sheetName]);
-			
-			//console.log(XL_row_object);
-			//var json_object = JSON.stringify(XL_row_object);
-			//console.log(json_object);
+		// now we can assign LN2 (or absolute line) to each block
+		// let's create an object
+		var obj = {};
+		for (i = 0; i < blocks.length; i++) {
+			let a = blocks[i].line;
+			// check obj if a exists as a property
+			obj[a] = (obj[a] + 1 || 1);
 
-		//})
+		}
+		//console.log(obj)
+		
+		var arr2 = Object.keys(obj).sort(function(a, b) {
+			return parseInt(obj.a) - parseInt(obj.b);
+		});
+		
+		// so it works
+		var obj2 = {};
+		for (let i = 0; i < arr2.length; i++) {
+			obj2[arr2[i]] = i+1;
+		}
+
+		
+		//console.log(obj2);
+	
+		// set line2 for each block
+		for (i = 0; i < blocks.length; i++) {
+
+			blocks[i].line2 = obj2[blocks[i].line];
+
+		}
+		
+		console.log('line2 set');
+		//console.log(blocks);
+		
+		// now we set rank
+		
+		console.log(blocks.sort(function(a,b) {
+			return parseInt(a.line2) - parseInt(b.line2);
+		}));
+
+		//console.log(blocks);
+		
+		for (let i = 0; i < blocks.length; i++) {
+			blocks[i].rank = i;
+		}
+		
+		console.log(blocks);
+	
  }
 
 
@@ -215,17 +250,17 @@ function setup() {
 function draw() {
   background(51);
 	
-	for (var i = 0; i < blockArray.length; i++) {
-		blockArray[i].update();
-		blockArray[i].display();
+	for (var i = 0; i < blocks.length; i++) {
+		blocks[i].update();
+		blocks[i].display();
 	}
 	
 }
 
 function mouseClicked() {
-	console.log(mouseX);
-	for (var i = 0; i < blockArray.length; i++) {
-		blockArray[i].highlight();
+	//console.log(mouseX);
+	for (var i = 0; i < blocks.length; i++) {
+		blocks[i].highlight();
 	}	
 }
  
@@ -235,17 +270,19 @@ function isNumeric(n) {
   return !isNaN(parseFloat(n)) && isFinite(n);
 }
 
-function Block(line, lineShift, itemNumber, startDate, endDate, startTime, endTime) {
+function Block(line, line2, lineShift, itemNumber, startDate, endDate, startTime, endTime) {
 	this.line = line;
+	this.line2 = line2;
 	this.itemNumber = itemNumber;
 	this.startDate = startDate;
 	this.endDate = endDate;
-	this.startTime = startTime;
-	this.endTime = endTime;
+	this.startTime = startTime*250;
+	this.endTime = endTime*250;
 	this.lineShift = lineShift;
-	this.startShift = 999999;
+	this.startShift = 43850;
 	this.highlighted = false;
-	
+	this.rank = 0;
+	this.timeMultiplier = 350;
 	
 	this.gap = 25;
 	
@@ -253,7 +290,7 @@ function Block(line, lineShift, itemNumber, startDate, endDate, startTime, endTi
 	this.x = parseFloat(this.startDate) + parseFloat(this.startTime);
 	this.h = 10;
 	this.y = parseFloat(this.line)*(this.h+this.gap)+this.lineShift;
-	this.w = Math.abs((parseFloat(this.endDate)+parseFloat(this.endTime) - this.x)*350);
+	this.w = Math.abs((parseFloat(this.endDate)+parseFloat(this.endTime) - this.x));
 	
 	
 	this.red = random(0, 255);
@@ -279,12 +316,19 @@ Block.prototype.display = function() {
 	text("Line" + this.line, this.x-this.startShift-this.h*2+width*0.25, height-this.y+this.h*0.5);
 }
 Block.prototype.update = function() {
+	// replace line with line2: redefine here bc if not it draws with line before line2 can calculate
+	// added rank
+	this.y = parseFloat(this.line2)*(this.h+this.gap)+this.lineShift+this.rank*this.h*1.5;
 	let s = this.x;
 	if (s < this.startShift) {
-		this.startShift = s;
+		//this.startShift = s;
 	}
+	this.x = parseFloat(this.startDate) + parseFloat(this.startTime);
 }
 Block.prototype.highlight = function() {
+	
+
+
 	this.x1 = this.x-this.startShift+width*0.25;
 	this.x2 = this.x1 + this.w;
 	this.y1 = height-this.y;
@@ -292,7 +336,7 @@ Block.prototype.highlight = function() {
 	
 	if (!this.highlighted && mouseX > this.x1 && mouseX < this.x2 && mouseY > this.y1 && mouseY < this.y2) {
 		this.highlighted = true;
-		
+			console.log(this);
 	} else {
 		this.highlighted = false;
 	}
